@@ -26,7 +26,7 @@ embedded-hal-async = { version = "1.0.0-rc.1", optional = true }
 
 [dev-dependencies]
 linux-embedded-hal = "0.3"
-embedded-hal-mock = "0.8"
+embedded-hal-mock = "0.9"
 
 [profile.release]
 lto = true
