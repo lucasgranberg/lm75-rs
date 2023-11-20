@@ -1,5 +1,4 @@
-use embedded_hal_mock::i2c::{Mock as I2cMock, Transaction as I2cTrans};
-use lm75::{ic, Address, Error, Lm75};
+use lm75::Error;
 
 pub const ADDR: u8 = 0b100_1000;
 
