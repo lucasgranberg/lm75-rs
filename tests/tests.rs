@@ -1,86 +1,78 @@
-use embedded_hal_mock::i2c::Transaction as I2cTrans;
-use lm75::{FaultQueue, OsMode, OsPolarity};
+use embedded_hal_mock::i2c::{Mock as I2cMock, Transaction as I2cTrans};
+use lm75::{Address, FaultQueue, Lm75, OsMode, OsPolarity};
 
 mod common;
 
-use crate::common::{
-    assert_invalid_input_data_error, destroy, destroy_pct2075, new, new_pct2075, Register, ADDR,
-};
-
-#[test]
-fn can_create_and_destroy_new() {
-    let sensor = new(&[]);
-    destroy(sensor);
-}
-
-#[test]
-fn can_create_and_destroy_new_pct2075() {
-    let sensor = new_pct2075(&[]);
-    destroy_pct2075(sensor);
-}
+use crate::common::{assert_invalid_input_data_error, Register, ADDR};
 
 #[test]
 fn can_enable() {
-    let mut sensor = new(&[I2cTrans::write(ADDR, vec![Register::CONFIGURATION, 0])]);
+    let transaction = &[I2cTrans::write(ADDR, vec![Register::CONFIGURATION, 0])];
+    let mut i2c = I2cMock::new(transaction);
+    let mut sensor = Lm75::new(&mut i2c, Address::default());
     sensor.enable().unwrap();
-    destroy(sensor);
 }
 
 #[test]
 fn can_disable() {
-    let mut sensor = new(&[I2cTrans::write(ADDR, vec![Register::CONFIGURATION, 1])]);
+    let transaction = &[I2cTrans::write(ADDR, vec![Register::CONFIGURATION, 1])];
+    let mut i2c = I2cMock::new(transaction);
+    let mut sensor = Lm75::new(&mut i2c, Address::default());
     sensor.disable().unwrap();
-    destroy(sensor);
 }
 
 #[test]
 fn can_read_temperature() {
-    let mut sensor = new(&[I2cTrans::write_read(
+    let transaction = &[I2cTrans::write_read(
         ADDR,
         vec![Register::TEMPERATURE],
         vec![0b1110_0111, 0b1010_0101], // -24.5
-    )]);
+    )];
+    let mut i2c = I2cMock::new(transaction);
+    let mut sensor = Lm75::new(&mut i2c, Address::default());
     let temp = sensor.read_temperature().unwrap();
     assert!(-24.4 > temp);
     assert!(-24.6 < temp);
-    destroy(sensor);
 }
 
 #[test]
 fn can_read_temperature_pct2075() {
-    let mut sensor = new_pct2075(&[I2cTrans::write_read(
+    let transaction = &[I2cTrans::write_read(
         ADDR,
         vec![Register::TEMPERATURE],
         vec![0b1110_0111, 0b1010_0101], // -24.375
-    )]);
+    )];
+    let mut i2c = I2cMock::new(transaction);
+    let mut sensor = Lm75::new(&mut i2c, Address::default());
     let temp = sensor.read_temperature().unwrap();
     assert!(-24.3 > temp);
     assert!(-24.4 < temp);
-    destroy_pct2075(sensor);
 }
 
 #[test]
 fn can_read_sample_rate() {
-    let mut sensor = new_pct2075(&[I2cTrans::write_read(
+    let transaction = &[I2cTrans::write_read(
         ADDR,
         vec![Register::T_IDLE],
         vec![0b0000_0001], // 100ms
-    )]);
+    )];
+    let mut i2c = I2cMock::new(transaction);
+    let mut sensor = Lm75::new_pct2075(&mut i2c, Address::default());
     let period = sensor.read_sample_rate().unwrap();
     assert_eq!(100, period);
-    destroy_pct2075(sensor);
 }
 
 macro_rules! set_config_test {
     ( $test_name:ident, $method:ident, $value:expr, $expected:expr ) => {
         #[test]
         fn $test_name() {
-            let mut sensor = new(&[I2cTrans::write(
+            let transaction = &[I2cTrans::write(
                 ADDR,
                 vec![Register::CONFIGURATION, $expected],
-            )]);
+            )];
+            let mut i2c = I2cMock::new(transaction);
+            let mut sensor = Lm75::new(&mut i2c, Address::default());
             sensor.$method($value).unwrap();
-            destroy(sensor);
         }
     };
 }
@@ -141,12 +133,13 @@ macro_rules! set_temp_test {
       $expected_msb:expr, $expected_lsb:expr ) => {
         #[test]
         fn $test_name() {
-            let mut sensor = new(&[I2cTrans::write(
+            let transaction = &[I2cTrans::write(
                 ADDR,
                 vec![$register, $expected_msb, $expected_lsb],
-            )]);
+            )];
+            let mut i2c = I2cMock::new(transaction);
+            let mut sensor = Lm75::new(&mut i2c, Address::default());
             sensor.$method($value).unwrap();
-            destroy(sensor);
         }
     };
 }
@@ -180,7 +173,8 @@ macro_rules! invalid_temp_test {
     ($test_name:ident, $method:ident, $value:expr) => {
         #[test]
         fn $test_name() {
-            let mut sensor = new(&[]);
+            let mut i2c = I2cMock::new(&[]);
+            let mut sensor = Lm75::new_pct2075(&mut i2c, Address::default());
             assert_invalid_input_data_error(sensor.$method($value));
         }
     };
@@ -230,9 +224,10 @@ macro_rules! set_sample_rate_test {
       $period:expr) => {
         #[test]
         fn $test_name() {
-            let mut sensor = new_pct2075(&[I2cTrans::write(ADDR, vec![$register, $period])]);
+            let transaction = &[I2cTrans::write(ADDR, vec![$register, $period])];
+            let mut i2c = I2cMock::new(transaction);
+            let mut sensor = Lm75::new_pct2075(&mut i2c, Address::default());
             sensor.$method($value).unwrap();
-            destroy_pct2075(sensor);
         }
     };
 }
@@ -263,7 +258,8 @@ macro_rules! invalid_sample_rate_test {
     ($test_name:ident, $method:ident, $value:expr) => {
         #[test]
         fn $test_name() {
-            let mut sensor = new_pct2075(&[]);
+            let mut i2c = I2cMock::new(&[]);
+            let mut sensor = Lm75::new_pct2075(&mut i2c, Address::default());
             assert_invalid_input_data_error(sensor.$method($value));
         }
     };

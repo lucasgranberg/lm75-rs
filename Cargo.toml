@@ -21,7 +21,8 @@ include = [
 edition = "2018"
 
 [dependencies]
-embedded-hal = "0.2"
+embedded-hal = { version = "0.2", optional = true }
+embedded-hal-async = { version = "1.0.0-rc.1", optional = true }
 
 [dev-dependencies]
 linux-embedded-hal = "0.3"
@@ -29,3 +30,8 @@ embedded-hal-mock = "0.8"
 
 [profile.release]
 lto = true
+
+[features]
+default = ["synch"]
+synch = ["dep:embedded-hal"]
+asynch = ["dep:embedded-hal-async"]

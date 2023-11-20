@@ -186,6 +186,26 @@
 
 use core::marker::PhantomData;
 
+struct Register;
+
+impl Register {
+    const TEMPERATURE: u8 = 0x00;
+    const CONFIGURATION: u8 = 0x01;
+    const T_HYST: u8 = 0x02;
+    const T_OS: u8 = 0x03;
+    const T_IDLE: u8 = 0x04;
+}
+
+struct BitFlags;
+
+impl BitFlags {
+    const SHUTDOWN: u8 = 0b0000_0001;
+    const COMP_INT: u8 = 0b0000_0010;
+    const OS_POLARITY: u8 = 0b0000_0100;
+    const FAULT_QUEUE0: u8 = 0b0000_1000;
+    const FAULT_QUEUE1: u8 = 0b0001_0000;
+}
+
 /// All possible errors in this crate
 #[derive(Debug)]
 pub enum Error<E> {
@@ -289,10 +309,10 @@ pub mod ic {
 }
 
 /// LM75 device driver.
-#[derive(Debug, Default)]
-pub struct Lm75<I2C, IC> {
+#[derive(Debug)]
+pub struct Lm75<'a, I2C, IC> {
     /// The concrete I²C device implementation.
-    i2c: I2C,
+    i2c: &'a mut I2C,
     /// The I²C device address.
     address: u8,
     /// Configuration register status.
@@ -301,9 +321,12 @@ pub struct Lm75<I2C, IC> {
     _ic: PhantomData<IC>,
 }
 
+#[cfg(feature = "asynch")]
+mod asynch;
 mod conversion;
-mod device_impl;
 mod markers;
+#[cfg(feature = "synch")]
+mod synch;
 
 /// Private Module
 pub mod private {
