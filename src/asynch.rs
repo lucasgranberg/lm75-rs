@@ -11,7 +11,7 @@ where
     I2C: i2c::I2c<Error = E>,
 {
     /// Create new instance of the LM75 device.
-    pub async fn new<A: Into<Address>>(i2c: &'a mut I2C, address: A) -> Self {
+    pub fn new<A: Into<Address>>(i2c: &'a mut I2C, address: A) -> Self {
         let a = address.into();
         Lm75 {
             i2c,
